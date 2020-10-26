@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bilibili/kratos/pkg/net/trace"
+	"github.com/go-kratos/kratos/pkg/net/trace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -189,4 +189,24 @@ func BenchmarkTraceConn(b *testing.B) {
 		}
 		c2.Close()
 	}
+}
+
+func TestTraceConnPending(t *testing.T) {
+	c, err := DialDefaultServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tc := &traceConn{
+		Conn:             c,
+		connTags:         []trace.Tag{trace.TagString(trace.TagPeerAddress, "abc")},
+		slowLogThreshold: time.Duration(1 * time.Second),
+	}
+	err = tc.Send("SET", "a", "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tc.Close()
+	assert.Equal(t, 1, tc.pending)
+	tc.Do("")
+	assert.Equal(t, 0, tc.pending)
 }
